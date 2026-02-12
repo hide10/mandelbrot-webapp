@@ -1,5 +1,7 @@
 /**
  * shaders.js - GLSL shader sources for fractal rendering
+ * Uses double-float emulation (two float32 = ~float64 precision)
+ * to allow deep zoom up to ~10^13
  */
 const Shaders = (() => {
   const vertexSource = `
@@ -9,51 +11,98 @@ const Shaders = (() => {
     }
   `;
 
-  // Fragment shader: supports Mandelbrot, Julia, Burning Ship, Tricorn
-  // Uses smooth coloring and palette texture lookup
   const fragmentSource = `
     precision highp float;
 
     uniform vec2 u_resolution;
-    uniform vec2 u_center;
+    uniform vec2 u_centerHi;     // center high bits (float32)
+    uniform vec2 u_centerLo;     // center low bits  (remainder)
     uniform float u_zoom;
     uniform int u_maxIter;
-    uniform int u_fractalType; // 0=mandelbrot, 1=julia, 2=burningship, 3=tricorn
+    uniform int u_fractalType;   // 0=mandelbrot, 1=julia, 2=burningship, 3=tricorn
     uniform vec2 u_juliaC;
     uniform sampler2D u_palette;
 
-    // Smooth iteration count
-    vec3 getColor(float iter, int maxIter) {
-      if (iter >= float(maxIter)) {
-        return vec3(0.0); // inside set = black
-      }
-      float t = iter / float(maxIter);
-      // Wrap palette a few times for detail at deep zoom
-      t = fract(t * 4.0);
-      return texture2D(u_palette, vec2(t, 0.5)).rgb;
+    // ===== Double-float arithmetic =====
+    // A "df" number is vec2(hi, lo) representing hi + lo
+
+    vec2 quickTwoSum(float a, float b) {
+      float s = a + b;
+      float e = b - (s - a);
+      return vec2(s, e);
     }
 
+    vec2 twoSum(float a, float b) {
+      float s = a + b;
+      float v = s - a;
+      float e = (a - (s - v)) + (b - v);
+      return vec2(s, e);
+    }
+
+    vec2 dfSplit(float a) {
+      float t = a * 4097.0;   // 2^12 + 1
+      float hi = t - (t - a);
+      float lo = a - hi;
+      return vec2(hi, lo);
+    }
+
+    vec2 twoProd(float a, float b) {
+      float p = a * b;
+      vec2 as = dfSplit(a);
+      vec2 bs = dfSplit(b);
+      float err = ((as.x * bs.x - p) + as.x * bs.y + as.y * bs.x) + as.y * bs.y;
+      return vec2(p, err);
+    }
+
+    vec2 dfAdd(vec2 a, vec2 b) {
+      vec2 s = twoSum(a.x, b.x);
+      s.y += a.y + b.y;
+      return quickTwoSum(s.x, s.y);
+    }
+
+    vec2 dfSub(vec2 a, vec2 b) {
+      return dfAdd(a, vec2(-b.x, -b.y));
+    }
+
+    vec2 dfMul(vec2 a, vec2 b) {
+      vec2 p = twoProd(a.x, b.x);
+      p.y += a.x * b.y + a.y * b.x;
+      return quickTwoSum(p.x, p.y);
+    }
+
+    vec2 dfSet(float a) {
+      return vec2(a, 0.0);
+    }
+
+    vec2 dfAbs(vec2 a) {
+      return a.x < 0.0 || (a.x == 0.0 && a.y < 0.0)
+        ? vec2(-a.x, -a.y)
+        : a;
+    }
+
+    // ===== Main =====
     void main() {
       vec2 uv = gl_FragCoord.xy / u_resolution;
       float aspect = u_resolution.x / u_resolution.y;
 
-      // Map pixel to complex plane
-      vec2 c;
-      c.x = (uv.x - 0.5) * aspect / u_zoom + u_center.x;
-      c.y = (uv.y - 0.5) / u_zoom + u_center.y;
+      // Per-pixel offset from center (single float is fine — it's small)
+      float dx = (uv.x - 0.5) * aspect / u_zoom;
+      float dy = (uv.y - 0.5) / u_zoom;
 
-      vec2 z;
-      vec2 param_c;
+      // Pixel coordinate in double-float: center(hi,lo) + offset
+      vec2 cx = dfAdd(vec2(u_centerHi.x, u_centerLo.x), dfSet(dx));
+      vec2 cy = dfAdd(vec2(u_centerHi.y, u_centerLo.y), dfSet(dy));
 
-      // Fractal type setup
+      // z and c initialization based on fractal type
+      vec2 zx, zy, pcx, pcy;
       if (u_fractalType == 1) {
-        // Julia: z starts at pixel coord, c is fixed
-        z = c;
-        param_c = u_juliaC;
+        // Julia: z = pixel coord, c = fixed parameter
+        zx = cx; zy = cy;
+        pcx = dfSet(u_juliaC.x);
+        pcy = dfSet(u_juliaC.y);
       } else {
-        // Mandelbrot, Burning Ship, Tricorn: z starts at 0, c is pixel coord
-        z = vec2(0.0);
-        param_c = c;
+        zx = dfSet(0.0); zy = dfSet(0.0);
+        pcx = cx; pcy = cy;
       }
 
       float iter = 0.0;
@@ -61,34 +110,49 @@ const Shaders = (() => {
 
       for (int i = 0; i < MAX_LOOP; i++) {
         if (i >= u_maxIter) break;
-        if (dot(z, z) > 4.0) break;
 
-        // Apply fractal formula
+        // Escape check (hi parts are enough for this)
+        float mag2 = zx.x * zx.x + zy.x * zy.x;
+        if (mag2 > 4.0) break;
+
+        // Fractal-specific pre-processing
         if (u_fractalType == 2) {
-          // Burning Ship: take abs of components before squaring
-          z = vec2(abs(z.x), abs(z.y));
+          // Burning Ship: abs(Re), abs(Im)
+          zx = dfAbs(zx);
+          zy = dfAbs(zy);
         } else if (u_fractalType == 3) {
           // Tricorn: conjugate z
-          z = vec2(z.x, -z.y);
+          zy = vec2(-zy.x, -zy.y);
         }
 
-        // z = z^2 + c
-        float xtemp = z.x * z.x - z.y * z.y + param_c.x;
-        z.y = 2.0 * z.x * z.y + param_c.y;
-        z.x = xtemp;
+        // z = z^2 + c  in double-float
+        vec2 xx = dfMul(zx, zx);
+        vec2 yy = dfMul(zy, zy);
+        vec2 xy = dfMul(zx, zy);
+        vec2 xy2 = dfAdd(xy, xy);
+
+        zx = dfAdd(dfSub(xx, yy), pcx);
+        zy = dfAdd(xy2, pcy);
 
         iter += 1.0;
       }
 
-      // Smooth coloring: subtract fractional escape
-      if (iter < float(u_maxIter)) {
-        float log_zn = log(dot(z, z)) / 2.0;
+      // Smooth coloring
+      float mag2 = zx.x * zx.x + zy.x * zy.x;
+      if (iter < float(u_maxIter) && mag2 > 4.0) {
+        float log_zn = log(mag2) / 2.0;
         float nu = log(log_zn / log(2.0)) / log(2.0);
         iter = iter + 1.0 - nu;
       }
 
-      vec3 color = getColor(iter, u_maxIter);
-      gl_FragColor = vec4(color, 1.0);
+      // Palette lookup
+      if (iter >= float(u_maxIter)) {
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+      } else {
+        float t = fract(iter / float(u_maxIter) * 4.0);
+        vec3 color = texture2D(u_palette, vec2(t, 0.5)).rgb;
+        gl_FragColor = vec4(color, 1.0);
+      }
     }
   `;
 

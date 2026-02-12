@@ -1,5 +1,6 @@
 /**
  * renderer.js - WebGL fractal rendering engine
+ * Passes center coordinates as double-float (hi+lo) pairs for deep zoom precision.
  */
 const Renderer = (() => {
   let gl = null;
@@ -7,6 +8,15 @@ const Renderer = (() => {
   let paletteTexture = null;
   let uniforms = {};
   let canvas = null;
+
+  /**
+   * Split a JavaScript float64 into two float32 values: hi + lo ≈ value
+   */
+  function splitDouble(value) {
+    const hi = Math.fround(value);
+    const lo = value - hi;
+    return [hi, lo];
+  }
 
   function init(canvasEl) {
     canvas = canvasEl;
@@ -44,13 +54,14 @@ const Renderer = (() => {
 
     // Cache uniform locations
     uniforms = {
-      resolution: gl.getUniformLocation(program, 'u_resolution'),
-      center: gl.getUniformLocation(program, 'u_center'),
-      zoom: gl.getUniformLocation(program, 'u_zoom'),
-      maxIter: gl.getUniformLocation(program, 'u_maxIter'),
+      resolution:  gl.getUniformLocation(program, 'u_resolution'),
+      centerHi:    gl.getUniformLocation(program, 'u_centerHi'),
+      centerLo:    gl.getUniformLocation(program, 'u_centerLo'),
+      zoom:        gl.getUniformLocation(program, 'u_zoom'),
+      maxIter:     gl.getUniformLocation(program, 'u_maxIter'),
       fractalType: gl.getUniformLocation(program, 'u_fractalType'),
-      juliaC: gl.getUniformLocation(program, 'u_juliaC'),
-      palette: gl.getUniformLocation(program, 'u_palette')
+      juliaC:      gl.getUniformLocation(program, 'u_juliaC'),
+      palette:     gl.getUniformLocation(program, 'u_palette')
     };
 
     // Create palette texture
@@ -99,8 +110,13 @@ const Renderer = (() => {
     if (!gl) return;
     resize();
 
+    // Split center coordinates into hi + lo for double-float precision
+    const [cxHi, cxLo] = splitDouble(state.centerX);
+    const [cyHi, cyLo] = splitDouble(state.centerY);
+
     gl.uniform2f(uniforms.resolution, canvas.width, canvas.height);
-    gl.uniform2f(uniforms.center, state.centerX, state.centerY);
+    gl.uniform2f(uniforms.centerHi, cxHi, cyHi);
+    gl.uniform2f(uniforms.centerLo, cxLo, cyLo);
     gl.uniform1f(uniforms.zoom, state.zoom);
     gl.uniform1i(uniforms.maxIter, state.maxIter);
     gl.uniform1i(uniforms.fractalType, state.fractalType);
