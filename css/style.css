@@ -1,0 +1,308 @@
+/* === Reset & Base === */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --header-h: 44px;
+  --info-h: 32px;
+  --panel-w: 280px;
+  --bg: #1a1a2e;
+  --bg-panel: #16213e;
+  --text: #e0e0e0;
+  --accent: #0f3460;
+  --accent-light: #537ec5;
+  --border: #2a2a4a;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* === Header === */
+#header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  background: rgba(22, 33, 62, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 100;
+  border-bottom: 1px solid var(--border);
+}
+
+#app-title {
+  font-size: 15px;
+  font-weight: 600;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* === Buttons === */
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.text-btn {
+  background: var(--accent);
+  border: 1px solid var(--accent-light);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 3px 10px;
+  border-radius: 4px;
+}
+
+.text-btn:hover {
+  background: var(--accent-light);
+}
+
+.action-btn {
+  width: 100%;
+  padding: 8px;
+  margin-top: 6px;
+  background: var(--accent);
+  border: 1px solid var(--accent-light);
+  color: var(--text);
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.action-btn:hover {
+  background: var(--accent-light);
+}
+
+/* === Side Panel === */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 199;
+}
+
+.side-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--panel-w);
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border);
+  z-index: 200;
+  overflow-y: auto;
+  padding: calc(var(--header-h) + 12px) 14px 14px;
+  transform: translateX(0);
+  transition: transform 0.25s ease;
+}
+
+.side-panel.hidden {
+  transform: translateX(calc(-1 * var(--panel-w) - 1px));
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.panel-section {
+  margin-bottom: 18px;
+}
+
+.panel-section > label:first-child {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent-light);
+  margin-bottom: 6px;
+}
+
+.panel-section select {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+/* Julia params */
+.julia-inputs {
+  display: flex;
+  gap: 8px;
+}
+
+.julia-inputs label {
+  flex: 1;
+  font-size: 12px;
+}
+
+.julia-inputs input {
+  width: 100%;
+  padding: 4px 6px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+/* Palette grid */
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.palette-swatch {
+  height: 32px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s;
+}
+
+.palette-swatch.active {
+  border-color: #fff;
+}
+
+.palette-swatch:hover {
+  border-color: var(--accent-light);
+}
+
+/* Slider */
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slider-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent-light);
+}
+
+.slider-row span {
+  min-width: 42px;
+  text-align: right;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* === Canvas === */
+#fractal-canvas {
+  position: fixed;
+  top: var(--header-h);
+  left: 0;
+  right: 0;
+  bottom: var(--info-h);
+  width: 100%;
+  height: calc(100% - var(--header-h) - var(--info-h));
+  display: block;
+}
+
+/* === Info Bar === */
+#info-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--info-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 12px;
+  background: rgba(22, 33, 62, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #aab;
+  z-index: 100;
+  border-top: 1px solid var(--border);
+}
+
+/* === Toast === */
+.toast {
+  position: fixed;
+  bottom: calc(var(--info-h) + 16px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent-light);
+  color: #fff;
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-size: 13px;
+  z-index: 300;
+  opacity: 1;
+  transition: opacity 0.4s;
+}
+
+.toast.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* === Responsive (small screens) === */
+@media (max-width: 767px) {
+  :root {
+    --panel-w: 260px;
+  }
+
+  #info-bar {
+    gap: 8px;
+    font-size: 11px;
+  }
+
+  #app-title {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 400px) {
+  #info-bar {
+    gap: 4px;
+    font-size: 10px;
+    padding: 0 6px;
+  }
+}

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Fractal Explorer</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header id="header">
+    <button id="menu-btn" class="icon-btn" aria-label="Menu">&#9776;</button>
+    <h1 id="app-title" data-i18n="title">Fractal Explorer</h1>
+    <div class="header-right">
+      <button id="lang-btn" class="text-btn">EN</button>
+      <button id="save-btn" class="icon-btn" aria-label="Save image">&#128247;</button>
+    </div>
+  </header>
+
+  <!-- Side Panel -->
+  <div id="overlay" class="overlay hidden"></div>
+  <nav id="side-panel" class="side-panel hidden">
+    <div class="panel-section">
+      <label data-i18n="fractalType">Fractal Type</label>
+      <select id="fractal-select">
+        <option value="mandelbrot" data-i18n="mandelbrot">Mandelbrot</option>
+        <option value="julia" data-i18n="julia">Julia</option>
+        <option value="burningship" data-i18n="burningship">Burning Ship</option>
+        <option value="tricorn" data-i18n="tricorn">Tricorn</option>
+      </select>
+    </div>
+
+    <div class="panel-section" id="julia-params" style="display:none;">
+      <label data-i18n="juliaParam">Julia Parameter (c)</label>
+      <div class="julia-inputs">
+        <label>Re: <input type="number" id="julia-re" value="-0.7" step="0.01"></label>
+        <label>Im: <input type="number" id="julia-im" value="0.27015" step="0.01"></label>
+      </div>
+      <button id="julia-apply" class="action-btn" data-i18n="apply">Apply</button>
+    </div>
+
+    <div class="panel-section">
+      <label data-i18n="colorPalette">Color Palette</label>
+      <div id="palette-grid" class="palette-grid"></div>
+    </div>
+
+    <div class="panel-section">
+      <label data-i18n="maxIterations">Max Iterations</label>
+      <div class="slider-row">
+        <input type="range" id="iter-slider" min="1" max="3.7" step="0.01" value="2.7">
+        <span id="iter-value">500</span>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <button id="reset-btn" class="action-btn" data-i18n="reset">Reset View</button>
+      <button id="share-btn" class="action-btn" data-i18n="share">Share URL</button>
+    </div>
+  </nav>
+
+  <!-- Canvas -->
+  <canvas id="fractal-canvas"></canvas>
+
+  <!-- Info Bar -->
+  <footer id="info-bar">
+    <span>x: <span id="info-x">-0.5000</span></span>
+    <span>y: <span id="info-y">0.0000</span></span>
+    <span>zoom: <span id="info-zoom">1.00</span></span>
+    <span>iter: <span id="info-iter">500</span></span>
+  </footer>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Scripts -->
+  <script src="js/i18n.js"></script>
+  <script src="js/palettes.js"></script>
+  <script src="js/shaders.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/controls.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
